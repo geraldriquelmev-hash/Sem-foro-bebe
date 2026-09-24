@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Semáforo Bebé">
+<meta name="theme-color" content="#3B6255">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Semáforo Bebé — Escáner de ingredientes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF2ED;
+    --card:#FFFFFF;
+    --ink:#1F2A24;
+    --ink-soft:#5C6B62;
+    --line:#DCE3DA;
+    --brand:#3B6255;
+    --brand-dark:#264A3E;
+    --red:#C4483C;
+    --red-bg:#FBEAE8;
+    --amber:#B9862A;
+    --amber-bg:#FBF1DE;
+    --green:#3F7A5B;
+    --green-bg:#E7F1EA;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:20px 18px 40px;}
+  header{padding:6px 2px 22px;}
+  .brand{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    color:var(--brand-dark);
+    letter-spacing:-0.01em;
+  }
+  .brand span{color:var(--ink-soft);font-family:'Inter';font-weight:400;font-size:14px;display:block;margin-top:2px;}
+
+  .stage{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:20px;
+    margin-bottom:16px;
+  }
+
+  .cam-area{
+    position:relative;
+    border-radius:14px;
+    overflow:hidden;
+    background:#E4E9E2;
+    aspect-ratio:4/3;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .cam-area img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cam-placeholder{
+    text-align:center;
+    color:var(--ink-soft);
+    padding:0 30px;
+  }
+  .cam-placeholder svg{width:38px;height:38px;margin-bottom:10px;stroke:var(--brand);}
+  .cam-placeholder p{font-size:13.5px;line-height:1.5;margin:0;}
+
+  .btn-row{display:flex;gap:10px;margin-top:14px;}
+  button{
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    font-weight:500;
+    border-radius:12px;
+    border:none;
+    padding:13px 16px;
+    cursor:pointer;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  button:active{transform:scale(0.97);}
+  .btn-primary{background:var(--brand);color:#fff;flex:1;}
+  .btn-primary:hover{background:var(--brand-dark);}
+  .btn-secondary{background:transparent;color:var(--brand-dark);border:1px solid var(--line);flex:1;}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);width:100%;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  input[type=file]{display:none;}
+
+  .steps{display:flex;gap:8px;margin:16px 2px 2px;}
+  .step{flex:1;text-align:center;}
+  .step .dot{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--line);color:var(--ink-soft);
+    font-size:12px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 6px;
+  }
+  .step.active .dot{background:var(--brand);color:#fff;}
+  .step.done .dot{background:var(--green);color:#fff;}
+  .step p{font-size:11px;color:var(--ink-soft);margin:0;}
+
+  .loading{
+    display:flex;align-items:center;gap:10px;
+    padding:16px 4px;color:var(--ink-soft);font-size:14px;
+  }
+  .spinner{
+    width:18px;height:18px;border-radius:50%;
+    border:2.5px solid var(--line);border-top-color:var(--brand);
+    animation:spin 0.8s linear infinite;flex-shrink:0;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .error-box{
+    background:var(--red-bg);color:var(--red);
+    border-radius:12px;padding:12px 14px;font-size:13.5px;
+    margin-top:14px;line-height:1.5;
+  }
+
+  .result-card{margin-top:4px;}
+  .semaphore{
+    display:flex;align-items:center;gap:16px;
+    padding:18px 4px 20px;
+  }
+  .score-dial{
+    width:78px;height:78px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    flex-shrink:0;border:3px solid;
+  }
+  .score-dial .n{font-family:'Fraunces',serif;font-weight:600;font-size:26px;line-height:1;}
+  .score-dial .d{font-size:10px;opacity:.75;}
+  .verdict-name{font-family:'Fraunces',serif;font-weight:600;font-size:19px;margin:0 0 4px;}
+  .verdict-sub{font-size:13.5px;color:var(--ink-soft);margin:0;line-height:1.5;}
+
+  .tag-safe .score-dial{border-color:var(--green);color:var(--green);background:var(--green-bg);}
+  .tag-safe .verdict-name{color:var(--green);}
+  .tag-warn .score-dial{border-color:var(--amber);color:var(--amber);background:var(--amber-bg);}
+  .tag-warn .verdict-name{color:var(--amber);}
+  .tag-danger .score-dial{border-color:var(--red);color:var(--red);background:var(--red-bg);}
+  .tag-danger .verdict-name{color:var(--red);}
+
+  .product-name{font-size:12.5px;color:var(--ink-soft);margin:-8px 0 4px;padding:0 4px;}
+
+  .why-box{
+    background:var(--bg);border-radius:12px;padding:14px 15px;font-size:13.5px;
+    line-height:1.6;color:var(--ink);margin-bottom:16px;
+  }
+  .why-box b{font-weight:600;}
+
+  .section-label{
+    font-size:12px;text-transform:none;color:var(--ink-soft);
+    margin:0 0 8px;padding:0 2px;font-weight:500;
+  }
+
+  .ing-list{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;}
+  .ing-item{
+    border:1px solid var(--line);border-radius:12px;
+    padding:11px 13px;display:flex;gap:11px;align-items:flex-start;
+  }
+  .ing-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .ing-dot.g{background:var(--green);}
+  .ing-dot.a{background:var(--amber);}
+  .ing-dot.r{background:var(--red);}
+  .ing-body p{margin:0;}
+  .ing-name{font-size:14px;font-weight:500;}
+  .ing-reason{font-size:12.5px;color:var(--ink-soft);margin-top:2px;line-height:1.45;}
+
+  .disclaimer{
+    font-size:11.5px;color:var(--ink-soft);line-height:1.6;
+    padding:14px 6px 0;border-top:1px solid var(--line);margin-top:18px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">Semáforo Bebé
+      <span>Fotografía la lista de ingredientes y evalúa el producto</span>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="cam-area" id="camArea">
+      <div class="cam-placeholder" id="camPlaceholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <p>Enfoca la lista de ingredientes del envase, con buena luz y sin reflejos</p>
+      </div>
+      <img id="preview" style="display:none;">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="btnCam">Tomar foto</button>
+      <button class="btn-secondary" id="btnGallery">Subir foto</button>
+    </div>
+    <button class="btn-ghost" id="btnAnalyze" style="margin-top:10px;display:none;">Analizar producto</button>
+    <input type="file" id="inputCam" accept="image/*" capture="environment">
+    <input type="file" id="inputGallery" accept="image/*">
+
+    <div class="steps">
+      <div class="step active" id="step1"><div class="dot">1</div><p>Foto</p></div>
+      <div class="step" id="step2"><div class="dot">2</div><p>Lectura</p></div>
+      <div class="step" id="step3"><div class="dot">3</div><p>Resultado</p></div>
+    </div>
+
+    <div id="loadingBox"></div>
+    <div id="errorBox"></div>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <div class="disclaimer">
+    Esta app lee solo lo que es legible en tu foto y distingue entre ingredientes prohibidos o restringidos por regulación vigente (UE, FDA, ISP Chile), evidencia científica moderada y precaución preliminar — indicándolo en cada observación. No inventa ingredientes ni dramatiza hallazgos débiles. Aun así, puede cometer errores de lectura o de criterio: no reemplaza la indicación de un pediatra o nutricionista, ni constituye una certificación oficial del producto.
+  </div>
+
+</div>
+
+<script>
+const camArea = document.getElementById('camArea');
+const preview = document.getElementById('preview');
+const camPlaceholder = document.getElementById('camPlaceholder');
+const btnCam = document.getElementById('btnCam');
+const btnGallery = document.getElementById('btnGallery');
+const btnAnalyze = document.getElementById('btnAnalyze');
+const inputCam = document.getElementById('inputCam');
+const inputGallery = document.getElementById('inputGallery');
+const loadingBox = document.getElementById('loadingBox');
+const errorBox = document.getElementById('errorBox');
+const resultArea = document.getElementById('resultArea');
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+
+let currentBase64 = null;
+let currentMediaType = null;
+
+btnCam.onclick = () => inputCam.click();
+btnGallery.onclick = () => inputGallery.click();
+inputCam.onchange = e => handleFile(e.target.files[0]);
+inputGallery.onchange = e => handleFile(e.target.files[0]);
+
+function handleFile(file){
+  if(!file) return;
+  errorBox.innerHTML = '';
+  resultArea.innerHTML = '';
+  setStep(1);
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    currentMediaType = file.type || 'image/jpeg';
+    currentBase64 = dataUrl.split(',')[1];
+    preview.src = dataUrl;
+    preview.style.display = 'block';
+    camPlaceholder.style.display = 'none';
+    btnAnalyze.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function setStep(n){
+  [step1,step2,step3].forEach((el,i) => {
+    el.classList.remove('active','done');
+    if(i+1 < n) el.classList.add('done');
+    if(i+1 === n) el.classList.add('active');
+  });
+}
+
+btnAnalyze.onclick = async () => {
+  if(!currentBase64) return;
+  errorBox.innerHTML = '';
+  resultArea.innerHTML = '';
+  btnAnalyze.disabled = true;
+  btnAnalyze.textContent = 'Analizando…';
+  setStep(2);
+  loadingBox.innerHTML = '<div class="loading"><div class="spinner"></div>Leyendo ingredientes y evaluando riesgos…</div>';
+
+  const systemPrompt = `Eres un asistente que analiza fotos de listas de ingredientes de productos (alimentos, cosméticos o cuidado personal para bebés) y evalúa su seguridad para un bebé (0 a 3 años), con rigor científico y sin sesgo alarmista.
+
+Responde EXCLUSIVAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, sin backticks.
+
+REGLAS ANTI-SESGO Y ANTI-INVENCIÓN (obligatorias):
+1. NUNCA inventes, asumas ni completes ingredientes que no se lean con claridad en la imagen. Si una palabra es ilegible, ignórala en vez de adivinarla.
+2. Si la foto no permite leer la lista de ingredientes completa o con nitidez suficiente, dilo explícitamente en "advertencia_lectura" y evalúa únicamente lo que sí es legible. No generes un puntaje "inventado" para lo ilegible.
+3. Distingue siempre el nivel de evidencia de cada observación, y dilo en el propio "motivo":
+   - Regulación vigente: ingrediente prohibido, restringido o con límite legal establecido por una autoridad (UE/ECHA, FDA, EFSA, ISP/ANAMED Chile, CODEX). Cita la autoridad si la conoces.
+   - Evidencia científica moderada: estudios en humanos o animales con hallazgos consistentes, sin prohibición formal.
+   - Precaución limitada/principio precautorio: evidencia preliminar, mixta o solo en estudios in vitro; dilo como tal, no como hecho establecido.
+4. No exageres ni dramatices. Una traza mínima o un ingrediente con evidencia débil no amerita el mismo peso que uno prohibido por regulación. No uses lenguaje alarmista ni absoluto ("cancerígeno", "tóxico", "veneno") salvo que sea la clasificación oficial exacta de una autoridad regulatoria, y en ese caso cítala.
+5. Sé igualmente riguroso en ambos sentidos: no subestimes riesgos con evidencia sólida, pero tampoco penalices ingredientes sin base real solo por sonar "químicos" (ej. el ácido cítrico, la lecitina de girasol o el agua no son riesgos).
+6. Ingredientes naturales, simples y sin aditivos de riesgo conocido deben puntuar alto (8-10) sin excepción.
+
+Categorías de riesgo a evaluar cuando aparezcan en la imagen:
+- Disruptores hormonales/endocrinos: parabenos (metilparabeno, propilparabeno, butilparabeno), ftalatos, bisfenol A/S (BPA/BPS), triclosán, triclocarbán, oxibenzona, "fragancia/parfum" sin especificar (posible ftalato oculto), PEG y derivados, liberadores de formaldehído (DMDM hidantoína, quaternium-15, imidazolidinil urea).
+- Aditivos y riesgos específicos en alimentos infantiles: nitratos/nitritos, glutamato monosódico, edulcorantes artificiales (aspartamo, sucralosa, acesulfame K), colorantes artificiales asociados a hiperactividad (tartrazina, amarillo 5, amarillo 6, rojo 40, azul 1), exceso de sodio, azúcares añadidos, conservantes BHA/BHT, miel (riesgo de botulismo infantil en menores de 12 meses), aceite mineral.
+- Otros: alcohol denaturado en alta concentración en piel de bebé, talco en productos para bebé.
+
+Formato de respuesta JSON exacto:
+{
+  "producto_detectado": "nombre o tipo de producto que identificas, o 'No identificado'",
+  "tipo": "alimento" | "cuidado_personal" | "otro",
+  "advertencia_lectura": "" o un texto breve si la foto no es clara o está incompleta,
+  "puntaje": número entero de 0 a 10,
+  "semaforo": "verde" | "amarillo" | "rojo",
+  "resumen": "explicación breve (2-3 frases), neutral y basada en lo detectado, sin exagerar ni minimizar",
+  "ingredientes": [
+    {
+      "nombre": "nombre del ingrediente tal como aparece o su nombre común",
+      "nivel": "ok" | "precaucion" | "riesgo",
+      "motivo": "razón breve indicando el nivel de evidencia (regulación citada, evidencia moderada, o precaución limitada), o '' si no hay observación relevante"
+    }
+  ]
+}
+
+Incluye en "ingredientes" solo los ingredientes relevantes: todos los que tengan nivel "riesgo" o "precaucion", y como máximo 3 ejemplos con nivel "ok" que sean ingredientes base/relevantes del producto. No incluyas más de 12 ingredientes en total.`;
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: currentMediaType, data: currentBase64 } },
+              { type: "text", text: "Analiza esta foto de ingredientes según las instrucciones del sistema. Responde solo con el JSON." }
+            ]
+          }
+        ]
+      })
+    });
+
+    if(!response.ok){
+      throw new Error('Fallo la conexión con el servicio de análisis (código ' + response.status + ')');
+    }
+
+    const data = await response.json();
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    if(!textBlock) throw new Error('No se recibió una respuesta de texto del análisis.');
+
+    let clean = textBlock.text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    let parsed;
+    try{
+      parsed = JSON.parse(clean);
+    }catch(e){
+      throw new Error('No se pudo interpretar el resultado del análisis. Intenta con una foto más clara y nítida.');
+    }
+
+    renderResult(parsed);
+    setStep(3);
+  }catch(err){
+    errorBox.innerHTML = '<div class="error-box">' + escapeHtml(err.message || 'Ocurrió un error al analizar la imagen. Intenta nuevamente.') + '</div>';
+    setStep(1);
+  }finally{
+    loadingBox.innerHTML = '';
+    btnAnalyze.disabled = false;
+    btnAnalyze.textContent = 'Analizar producto';
+  }
+};
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function renderResult(r){
+  const tagClass = r.semaforo === 'verde' ? 'tag-safe' : (r.semaforo === 'amarillo' ? 'tag-warn' : 'tag-danger');
+  const verdictLabel = r.semaforo === 'verde' ? 'Apto' : (r.semaforo === 'amarillo' ? 'Con precaución' : 'No recomendado');
+  const score = Math.max(0, Math.min(10, Math.round(r.puntaje)));
+
+  let html = '<div class="stage result-card ' + tagClass + '">';
+
+  if(r.producto_detectado && r.producto_detectado !== 'No identificado'){
+    html += '<p class="product-name">' + escapeHtml(r.producto_detectado) + '</p>';
+  }
+
+  html += '<div class="semaphore">';
+  html += '<div class="score-dial"><span class="n">' + score + '</span><span class="d">de 10</span></div>';
+  html += '<div><p class="verdict-name">' + verdictLabel + '</p><p class="verdict-sub">' + escapeHtml(r.resumen || '') + '</p></div>';
+  html += '</div>';
+
+  if(r.advertencia_lectura){
+    html += '<div class="error-box" style="margin-bottom:14px;">' + escapeHtml(r.advertencia_lectura) + '</div>';
+  }
+
+  if(Array.isArray(r.ingredientes) && r.ingredientes.length){
+    html += '<p class="section-label">Detalle por ingrediente</p>';
+    html += '<div class="ing-list">';
+    r.ingredientes.forEach(ing => {
+      const dotClass = ing.nivel === 'ok' ? 'g' : (ing.nivel === 'precaucion' ? 'a' : 'r');
+      html += '<div class="ing-item"><span class="ing-dot ' + dotClass + '"></span><div class="ing-body">';
+      html += '<p class="ing-name">' + escapeHtml(ing.nombre || '') + '</p>';
+      if(ing.motivo){
+        html += '<p class="ing-reason">' + escapeHtml(ing.motivo) + '</p>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  resultArea.innerHTML = html;
+}
+</script>
+</body>
+</html>
